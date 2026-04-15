@@ -1,6 +1,8 @@
 package dispatch
 
-import "net/http"
+import (
+	"net/http"
+)
 
 type RequestAdapter interface {
 	Request() *http.Request
@@ -8,7 +10,8 @@ type RequestAdapter interface {
 type typedHandler[T RequestAdapter] func(http.ResponseWriter, T)
 type TypedHandler[T RequestAdapter] struct {
 	*http.ServeMux
-	loader func(*http.Request) T
+	loader            func(*http.Request) T
+	chainedMiddleware func(http.ResponseWriter, T, typedHandler[T])
 }
 
 func NewTypedHandler[T RequestAdapter](fn func(*http.Request) T) *TypedHandler[T] {
@@ -32,7 +35,11 @@ func (mux *TypedHandler[T]) HandleFunc(route string, handler typedHandler[T]) {
 		typedHandler: handler,
 	}
 	h.fn = func(w http.ResponseWriter, r *http.Request) {
-		h.typedHandler(w, mux.loader(r))
+		if mux.chainedMiddleware != nil {
+			mux.chainedMiddleware(w, mux.loader(r), h.typedHandler)
+		} else {
+			h.typedHandler(w, mux.loader(r))
+		}
 	}
 	mux.Handle(route, h)
 }

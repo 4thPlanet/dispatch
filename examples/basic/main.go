@@ -9,6 +9,7 @@ import (
 	"syscall"
 
 	"github.com/4thPlanet/dispatch"
+	"github.com/4thPlanet/dispatch/examples/basic/internal/middleware"
 	"github.com/4thPlanet/dispatch/examples/basic/internal/routes"
 )
 
@@ -31,7 +32,14 @@ var config = Config{
 func main() {
 	server := dispatch.NewServer()
 
-	server.Handle("/", routes.SetupRouter())
+	router := routes.SetupRouter()
+	router.UseMiddleware(
+		middleware.Logger(),
+		middleware.Errors(),
+		middleware.Counter(),
+	)
+
+	server.Handle("/", router)
 
 	listener, err := net.Listen(config.Listener.Protocol, config.Listener.Address)
 	if err != nil {

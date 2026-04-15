@@ -1,13 +1,15 @@
 package routes
 
 import (
+	"fmt"
 	"net/http"
 
 	"github.com/4thPlanet/dispatch"
 )
 
 type Handler struct {
-	r *http.Request
+	r           *http.Request
+	VisitNumber uint32
 }
 
 func (h *Handler) Request() *http.Request {
@@ -21,7 +23,12 @@ func SetupRouter() *dispatch.TypedHandler[*Handler] {
 		}
 	})
 	handler.HandleFunc("/", func(w http.ResponseWriter, r *Handler) {
-		w.Write([]byte("Hello, World!"))
+		fmt.Fprintf(w, "Hello, World! You are visit number %d\n", r.VisitNumber)
+	})
+	// This is an intentionally faulty handler to demonstrate how the error handler middleware behaves.
+	handler.HandleFunc("/panic", func(w http.ResponseWriter, r *Handler) {
+		var a *int
+		*a = *a + 10
 	})
 	return handler
 
