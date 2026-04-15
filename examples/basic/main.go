@@ -4,12 +4,12 @@ import (
 	"context"
 	"log"
 	"net"
-	"net/http"
 	"os"
 	"os/signal"
 	"syscall"
 
 	"github.com/4thPlanet/dispatch"
+	"github.com/4thPlanet/dispatch/examples/basic/internal/routes"
 )
 
 type ListenerConfig struct {
@@ -30,9 +30,8 @@ var config = Config{
 
 func main() {
 	server := dispatch.NewServer()
-	server.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-		w.Write([]byte("Hello, World!"))
-	})
+
+	server.Handle("/", routes.SetupRouter())
 
 	listener, err := net.Listen(config.Listener.Protocol, config.Listener.Address)
 	if err != nil {
