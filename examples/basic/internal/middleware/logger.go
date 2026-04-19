@@ -88,7 +88,9 @@ func Logger() dispatch.Middleware[*routes.Handler] {
 		r.Request().Body = bsr
 
 		next(wl, r, next)
-		io.ReadAll(bsr)
+		if _, err := io.ReadAll(bsr); err != nil {
+			log.Printf("Error reading remainder of request body: %v", err)
+		}
 		log.Printf("%s %s %s in: %d out: %d | %d",
 			r.Request().Method,
 			r.Request().URL.Path,

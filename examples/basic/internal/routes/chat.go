@@ -15,7 +15,7 @@ func chatHandler(handler *dispatch.TypedHandler[*Handler]) {
 	chat := dispatch.ProtocolRouter[*Handler]{
 		Http: func(w http.ResponseWriter, r *Handler) {
 			// output a basic HTML page with chat..
-			w.Write([]byte(`<html>
+			if _, err := w.Write([]byte(`<html>
       <head>
         <title>Chat Room</title>
         <script type="text/javascript">
@@ -31,7 +31,7 @@ func chatHandler(handler *dispatch.TypedHandler[*Handler]) {
           socket.addEventListener("close", () => {
             document.getElementById("message").disabled = "disabled"
           })
-          
+
           function send() {
             socket.send(document.getElementById("message").value)
             document.getElementById("message").value = ""
@@ -45,7 +45,10 @@ func chatHandler(handler *dispatch.TypedHandler[*Handler]) {
           <button type="submit">Send</button>
         </form>
       </body>
-      </html>`))
+      </html>`)); err != nil {
+				log.Println("Error writing to client: ", err)
+				w.WriteHeader(http.StatusInternalServerError)
+			}
 		},
 		WebSocket: func(r *Handler, in <-chan dispatch.WebSocketMessage) <-chan dispatch.WebSocketMessage {
 			out := make(chan dispatch.WebSocketMessage)
@@ -77,7 +80,7 @@ func chatHandler(handler *dispatch.TypedHandler[*Handler]) {
 	wallflower := dispatch.ProtocolRouter[*Handler]{
 		Http: func(w http.ResponseWriter, r *Handler) {
 			// output a basic HTML page with chat..
-			w.Write([]byte(`<html>
+			if _, err := w.Write([]byte(`<html>
       <head>
         <title>Chat Room (Wallflower)</title>
         <script type="text/javascript">
@@ -92,7 +95,10 @@ func chatHandler(handler *dispatch.TypedHandler[*Handler]) {
       <body>
         <div id="messages"></div>
       </body>
-      </html>`))
+      </html>`)); err != nil {
+				log.Println("Error writing to client: ", err)
+				w.WriteHeader(http.StatusInternalServerError)
+			}
 		},
 		ServerSentEvents: func(r *Handler, ctx context.Context) <-chan dispatch.ServerSentEventMessage {
 			chats := make(chan dispatch.WebSocketMessage)

@@ -2,6 +2,7 @@ package dispatch
 
 import (
 	"net/http"
+	"time"
 )
 
 type Server struct {
@@ -14,7 +15,8 @@ func NewServer() *Server {
 		ServeMux: http.NewServeMux(),
 	}
 	server.Server = &http.Server{
-		Handler: server.ServeMux,
+		Handler:           server.ServeMux,
+		ReadHeaderTimeout: time.Second * 5,
 	}
 	return server
 

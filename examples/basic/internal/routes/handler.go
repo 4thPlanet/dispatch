@@ -25,6 +25,11 @@ type HtmlOutputer interface {
 	Html(http.ResponseWriter) error
 }
 
+func must(err error) {
+	if err != nil {
+		panic("Unexpected error: " + err.Error())
+	}
+}
 func SetupRouter() *dispatch.TypedHandler[*Handler] {
 	handler := dispatch.NewTypedHandler(func(r *http.Request) *Handler {
 		return &Handler{
@@ -32,9 +37,9 @@ func SetupRouter() *dispatch.TypedHandler[*Handler] {
 		}
 	})
 	var ctn = dispatch.NewContentTypeNegotiator()
-	dispatch.RegisterImplementationToNegotiator[TextOutputer](ctn, "text/plain")
-	dispatch.RegisterImplementationToNegotiator[HtmlOutputer](ctn, "text/html")
-	dispatch.RegisterImplementationToNegotiator[JsonOutputer](ctn, "application/json")
+	must(dispatch.RegisterImplementationToNegotiator[TextOutputer](ctn, "text/plain"))
+	must(dispatch.RegisterImplementationToNegotiator[HtmlOutputer](ctn, "text/html"))
+	must(dispatch.RegisterImplementationToNegotiator[JsonOutputer](ctn, "application/json"))
 	greetingHandler(handler, ctn)
 	chatHandler(handler)
 

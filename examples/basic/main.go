@@ -4,6 +4,7 @@ import (
 	"context"
 	"log"
 	"net"
+	"net/http"
 	"os"
 	"os/signal"
 	"syscall"
@@ -56,9 +57,11 @@ func main() {
 		if err := server.Shutdown(ctx); err != nil {
 			log.Println("Error performing graceful shutdown: ", err)
 		}
-		listener.Close()
+		listener.Close() // #nosec G104 - Best Effort shutdown of the listener
 		os.Exit(0)
 	}()
-	server.Serve(listener)
+	if err := server.Serve(listener); err != http.ErrServerClosed {
+		log.Fatalln("Error serving: ", err)
+	}
 	select {}
 }
