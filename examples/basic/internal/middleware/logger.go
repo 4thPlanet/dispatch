@@ -1,8 +1,11 @@
 package middleware
 
 import (
+	"bufio"
+	"errors"
 	"io"
 	"log"
+	"net"
 	"net/http"
 	"sync"
 	"time"
@@ -32,6 +35,18 @@ func (w *writerLog) Write(out []byte) (int, error) {
 func (w *writerLog) WriteHeader(code int) {
 	w.code = code
 	w.ResponseWriter.WriteHeader(code)
+}
+func (w *writerLog) Hijack() (net.Conn, *bufio.ReadWriter, error) {
+	h, ok := w.ResponseWriter.(http.Hijacker)
+	if !ok {
+		return nil, nil, errors.New("hijack not supported")
+	}
+	return h.Hijack()
+}
+func (w *writerLog) Flush() {
+	if f, ok := w.ResponseWriter.(http.Flusher); ok {
+		f.Flush()
+	}
 }
 
 // Custom Reader on request body to get size of input

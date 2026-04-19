@@ -36,12 +36,14 @@ func SetupRouter() *dispatch.TypedHandler[*Handler] {
 	dispatch.RegisterImplementationToNegotiator[HtmlOutputer](ctn, "text/html")
 	dispatch.RegisterImplementationToNegotiator[JsonOutputer](ctn, "application/json")
 	greetingHandler(handler, ctn)
+	chatHandler(handler)
 
 	// This is an intentionally faulty handler to demonstrate how the error handler middleware behaves.
 	handler.HandleFunc("/panic", func(w http.ResponseWriter, r *Handler) {
 		var a *int
 		*a = *a + 10
 	})
+
 	return handler
 
 }

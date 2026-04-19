@@ -7,6 +7,7 @@ import (
 	"os"
 	"os/signal"
 	"syscall"
+	"time"
 
 	"github.com/4thPlanet/dispatch"
 	"github.com/4thPlanet/dispatch/examples/basic/internal/middleware"
@@ -24,8 +25,8 @@ type Config struct {
 
 var config = Config{
 	Listener: ListenerConfig{
-		Protocol: "unix",
-		Address:  "./server.sock",
+		Protocol: "tcp",
+		Address:  "localhost:8080",
 	},
 }
 
@@ -50,9 +51,14 @@ func main() {
 	signal.Notify(c, syscall.SIGINT, syscall.SIGTERM)
 	go func() {
 		<-c
-		server.Shutdown(context.TODO())
+		ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+		defer cancel()
+		if err := server.Shutdown(ctx); err != nil {
+			log.Println("Error performing graceful shutdown: ", err)
+		}
 		listener.Close()
 		os.Exit(0)
 	}()
 	server.Serve(listener)
+	select {}
 }
