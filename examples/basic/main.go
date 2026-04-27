@@ -45,7 +45,7 @@ func main() {
 
 	listener, err := net.Listen(config.Listener.Protocol, config.Listener.Address)
 	if err != nil {
-		log.Fatalf("Unable to listen on unix socket: %v", err)
+		log.Fatalf("Unable to listen on %s socket: %v", config.Listener.Protocol, err)
 	}
 
 	c := make(chan os.Signal, 1)

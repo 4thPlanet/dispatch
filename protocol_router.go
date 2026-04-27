@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"log"
 	"net/http"
 
 	"github.com/gobwas/ws"
@@ -48,7 +47,7 @@ type ProtocolRouter[R RequestAdapter] struct {
 	ServerSentEvents func(r R, ctx context.Context) <-chan ServerSentEventMessage
 }
 
-func (proto *ProtocolRouter[R]) AsTypedHandler(logger *log.Logger) typedHandler[R] {
+func (proto *ProtocolRouter[R]) AsTypedHandler(logger Printer) typedHandler[R] {
 	return func(w http.ResponseWriter, r R) {
 		if r.Request().Header.Get("Accept") == "text/event-stream" {
 			if proto.ServerSentEvents != nil {
