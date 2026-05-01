@@ -160,7 +160,7 @@ func TestAsTypedHandler(t *testing.T) {
 		req.PathDepth = strings.Count(r.URL.Path, "/")
 		return req
 	})
-	handler.HandleFunc("/", fooView.AsTypedHandler(ctn, log.Default()))
+	handler.HandleFunc("/", fooView.AsTypedHandler(ctn, log.Default().Writer()))
 	foo := new(Foo)
 	for _, test := range []struct {
 		Path       string

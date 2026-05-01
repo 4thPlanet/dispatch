@@ -136,6 +136,6 @@ func chatHandler(handler *dispatch.TypedHandler[*Handler]) {
 		},
 	}
 
-	handler.HandleFunc("/chat", chat.AsTypedHandler(log.Default()))
-	handler.HandleFunc("/chat/wall", wallflower.AsTypedHandler(log.Default()))
+	handler.HandleFunc("/chat", chat.AsTypedHandler(log.Default().Writer()))
+	handler.HandleFunc("/chat/wall", wallflower.AsTypedHandler(log.Default().Writer()))
 }

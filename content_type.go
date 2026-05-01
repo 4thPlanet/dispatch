@@ -2,6 +2,8 @@ package dispatch
 
 import (
 	"cmp"
+	"fmt"
+	"io"
 	"net/http"
 	"reflect"
 	"slices"
@@ -217,7 +219,7 @@ type HttpError interface {
 	ErrorCode() int
 }
 
-func (fn ContentTypeHandler[R, O]) AsTypedHandler(ctn *ContentTypeNegotiator, logger Printer) typedHandler[R] {
+func (fn ContentTypeHandler[R, O]) AsTypedHandler(ctn *ContentTypeNegotiator, logger io.Writer) typedHandler[R] {
 	return func(w http.ResponseWriter, r R) {
 		implementation, contentType := ctn.negotiateContentType(r.Request().Header.Get("Accept"), reflect.TypeFor[O]())
 		if implementation == nil {
@@ -240,7 +242,7 @@ func (fn ContentTypeHandler[R, O]) AsTypedHandler(ctn *ContentTypeNegotiator, lo
 
 		transformer := reflect.ValueOf(out).Convert(implementation).Method(0).Interface().(func(http.ResponseWriter) error)
 		if err := transformer(w); err != nil {
-			logger.Print(err)
+			fmt.Fprint(logger, err)
 			w.WriteHeader(http.StatusInternalServerError)
 		}
 

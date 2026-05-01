@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"io"
 	"net/http"
 
 	"github.com/gobwas/ws"
@@ -47,7 +48,7 @@ type ProtocolRouter[R RequestAdapter] struct {
 	ServerSentEvents func(r R, ctx context.Context) <-chan ServerSentEventMessage
 }
 
-func (proto *ProtocolRouter[R]) AsTypedHandler(logger Printer) typedHandler[R] {
+func (proto *ProtocolRouter[R]) AsTypedHandler(logger io.Writer) typedHandler[R] {
 	return func(w http.ResponseWriter, r R) {
 		if r.Request().Header.Get("Accept") == "text/event-stream" {
 			if proto.ServerSentEvents != nil {
@@ -75,7 +76,7 @@ func (proto *ProtocolRouter[R]) AsTypedHandler(logger Printer) typedHandler[R] {
 			if proto.WebSocket != nil {
 				conn, _, _, err := ws.UpgradeHTTP(r.Request(), w)
 				if err != nil {
-					logger.Printf("Error upgrading websocket connection: %v", err)
+					fmt.Fprintf(logger, "Error upgrading websocket connection: %v", err)
 					w.WriteHeader(http.StatusInternalServerError)
 					return
 				}
@@ -96,7 +97,7 @@ func (proto *ProtocolRouter[R]) AsTypedHandler(logger Printer) typedHandler[R] {
 						payload, opcode, err := wsutil.ReadClientData(conn)
 						if err != nil {
 							if !errors.As(err, new(wsutil.ClosedError)) {
-								logger.Printf("Error reading websocket payload: %v", err)
+								fmt.Fprintf(logger, "Error reading websocket payload: %v", err)
 							}
 							return
 						}
@@ -119,7 +120,7 @@ func (proto *ProtocolRouter[R]) AsTypedHandler(logger Printer) typedHandler[R] {
 					}
 					err := wsutil.WriteServerMessage(conn, msgType, msg.Data)
 					if err != nil {
-						logger.Printf("Error writing websocket message: %v", err)
+						fmt.Fprintf(logger, "Error writing websocket message: %v", err)
 					}
 				}
 			} else {

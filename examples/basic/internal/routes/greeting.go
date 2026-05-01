@@ -42,7 +42,7 @@ func greetingHandler(handler *dispatch.TypedHandler[*Handler], ctn *dispatch.Con
 			VisitNumber: r.VisitNumber,
 		}, nil
 	}
-	typedHandler := greetingFunc.AsTypedHandler(ctn, log.Default())
+	typedHandler := greetingFunc.AsTypedHandler(ctn, log.Default().Writer())
 	handler.HandleFunc("/{$}", typedHandler)
 	handler.HandleFunc("/{name}", typedHandler)
 }
