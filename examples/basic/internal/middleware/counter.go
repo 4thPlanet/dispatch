@@ -4,16 +4,19 @@ import (
 	"net/http"
 	"sync/atomic"
 
-	"github.com/4thPlanet/dispatch"
 	"github.com/4thPlanet/dispatch/examples/basic/internal/routes"
 )
 
-var siteVisits atomic.Uint32
+type CounterMW struct {
+	visits atomic.Uint32
+}
 
-func Counter() dispatch.Middleware[*routes.Handler] {
-	return func(w http.ResponseWriter, r *routes.Handler, next dispatch.Middleware[*routes.Handler]) {
-		// count visits to the site
-		r.VisitNumber = siteVisits.Add(1)
-		next(w, r, next)
-	}
+func (mw *CounterMW) Enter(w http.ResponseWriter, r *routes.Handler) (http.ResponseWriter, *routes.Handler, bool) {
+	r.VisitNumber = mw.visits.Add(1)
+	return w, r, true
+}
+func (mw *CounterMW) Exit(w http.ResponseWriter, r *routes.Handler) {}
+
+func Counter() *CounterMW {
+	return new(CounterMW)
 }

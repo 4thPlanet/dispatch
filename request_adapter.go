@@ -10,8 +10,8 @@ type RequestAdapter interface {
 type typedHandler[T RequestAdapter] func(http.ResponseWriter, T)
 type TypedHandler[T RequestAdapter] struct {
 	*http.ServeMux
-	loader            func(*http.Request) T
-	chainedMiddleware func(http.ResponseWriter, T, typedHandler[T])
+	loader func(*http.Request) T
+	mws    []Middleware[T]
 }
 
 func NewTypedHandler[T RequestAdapter](fn func(*http.Request) T) *TypedHandler[T] {
@@ -34,12 +34,17 @@ func (mux *TypedHandler[T]) HandleFunc(route string, handler typedHandler[T]) {
 	h := &handlerBridge[T]{
 		typedHandler: handler,
 	}
-	h.fn = func(w http.ResponseWriter, r *http.Request) {
-		if mux.chainedMiddleware != nil {
-			mux.chainedMiddleware(w, mux.loader(r), h.typedHandler)
-		} else {
-			h.typedHandler(w, mux.loader(r))
+	h.fn = func(w http.ResponseWriter, req *http.Request) {
+		r := mux.loader(req)
+		var ok bool
+		for _, mw := range mux.mws {
+			w, r, ok = mw.Enter(w, r)
+			if !ok {
+				return
+			}
+			defer mw.Exit(w, r)
 		}
+		h.typedHandler(w, r)
 	}
 	mux.Handle(route, h)
 }

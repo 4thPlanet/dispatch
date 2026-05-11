@@ -70,34 +70,62 @@ func (bsr *bodySizeReader) Close() error {
 	return nil
 }
 
+var wlPool sync.Pool
+
+type loggerData struct {
+	start time.Time
+	wl    *writerLog
+	bsr   *bodySizeReader
+}
+type LoggerMW struct {
+	data map[*routes.Handler]loggerData
+	mu   sync.Mutex
+}
+
+func (mw *LoggerMW) Enter(w http.ResponseWriter, r *routes.Handler) (http.ResponseWriter, *routes.Handler, bool) {
+	var data loggerData
+
+	data.start = time.Now()
+	data.wl = wlPool.Get().(*writerLog)
+	data.wl.reset(w)
+
+	data.bsr = newBodySizeReader(r.Request().Body)
+
+	r.Request().Body = data.bsr
+	mw.mu.Lock()
+	defer mw.mu.Unlock()
+	mw.data[r] = data
+	return data.wl, r, true
+}
+func (mw *LoggerMW) Exit(w http.ResponseWriter, r *routes.Handler) {
+	mw.mu.Lock()
+	data := mw.data[r]
+	delete(mw.data, r)
+	mw.mu.Unlock()
+
+	defer wlPool.Put(data.wl)
+	defer data.bsr.ReadCloser.Close()
+	if _, err := io.ReadAll(data.bsr); err != nil {
+		log.Printf("Error reading remainder of request body: %v", err)
+	}
+
+	log.Printf("%s %s %s in: %d out: %d | %d",
+		r.Request().Method,
+		r.Request().URL.Path,
+		time.Since(data.start),
+		data.bsr.size,
+		data.wl.length,
+		data.wl.code,
+	)
+}
+
 func Logger() dispatch.Middleware[*routes.Handler] {
-	wlPool := sync.Pool{
+	wlPool = sync.Pool{
 		New: func() any {
 			return new(writerLog)
 		},
 	}
-
-	return func(w http.ResponseWriter, r *routes.Handler, next dispatch.Middleware[*routes.Handler]) {
-		start := time.Now()
-		wl := wlPool.Get().(*writerLog)
-		defer wlPool.Put(wl)
-		wl.reset(w)
-
-		bsr := newBodySizeReader(r.Request().Body)
-		defer bsr.ReadCloser.Close()
-		r.Request().Body = bsr
-
-		next(wl, r, next)
-		if _, err := io.ReadAll(bsr); err != nil {
-			log.Printf("Error reading remainder of request body: %v", err)
-		}
-		log.Printf("%s %s %s in: %d out: %d | %d",
-			r.Request().Method,
-			r.Request().URL.Path,
-			time.Since(start),
-			bsr.size,
-			wl.length,
-			wl.code,
-		)
+	return &LoggerMW{
+		data: map[*routes.Handler]loggerData{},
 	}
 }

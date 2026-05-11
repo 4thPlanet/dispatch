@@ -8,15 +8,18 @@ import (
 	"github.com/4thPlanet/dispatch/examples/basic/internal/routes"
 )
 
-func Errors() dispatch.Middleware[*routes.Handler] {
-	return func(w http.ResponseWriter, r *routes.Handler, next dispatch.Middleware[*routes.Handler]) {
-		// count visits to the site
-		defer func() {
-			if r := recover(); r != nil {
-				log.Printf("A panic occurred while processing the request! %v", r)
-				w.WriteHeader(http.StatusInternalServerError)
-			}
-		}()
-		next(w, r, next)
+type ErrorMW struct{}
+
+func (mw *ErrorMW) Enter(w http.ResponseWriter, r *routes.Handler) (http.ResponseWriter, *routes.Handler, bool) {
+	return w, r, true
+}
+func (mw *ErrorMW) Exit(w http.ResponseWriter, r *routes.Handler) {
+	if r := recover(); r != nil {
+		log.Printf("A panic occurred while processing the request! %v", r)
+		w.WriteHeader(http.StatusInternalServerError)
 	}
+}
+
+func Errors() dispatch.Middleware[*routes.Handler] {
+	return new(ErrorMW)
 }

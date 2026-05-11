@@ -8,23 +8,34 @@ import (
 	"testing"
 )
 
+type teapotChecker struct{}
+
+func (mw *teapotChecker) Enter(w http.ResponseWriter, r *testRequest) (http.ResponseWriter, *testRequest, bool) {
+	// if context.teapot is set, return a teapot
+	if teapot := r.Request().Context().Value("teapot"); teapot != nil {
+		w.WriteHeader(http.StatusTeapot)
+		return nil, nil, false
+	}
+	return w, r, true
+}
+func (mw *teapotChecker) Exit(w http.ResponseWriter, r *testRequest) {}
+
+type methodChecker struct{}
+
+func (mw *methodChecker) Enter(w http.ResponseWriter, r *testRequest) (http.ResponseWriter, *testRequest, bool) {
+	// realistically this would be done by specifying the method in the handler..
+	if r.Request().Method != http.MethodGet {
+		w.WriteHeader(http.StatusMethodNotAllowed)
+		return nil, nil, false
+	}
+	return w, r, true
+}
+func (mw *methodChecker) Exit(w http.ResponseWriter, r *testRequest) {}
+
 func TestUseMiddleware(t *testing.T) {
-	var mw1 Middleware[*testRequest] = func(w http.ResponseWriter, r *testRequest, next Middleware[*testRequest]) {
-		// if context.teapot is set, return a teapot
-		if teapot := r.Request().Context().Value("teapot"); teapot != nil {
-			w.WriteHeader(http.StatusTeapot)
-			return
-		}
-		next(w, r, next)
-	}
-	var mw2 Middleware[*testRequest] = func(w http.ResponseWriter, r *testRequest, next Middleware[*testRequest]) {
-		// realistically this would be done by specifying the method in the handler..
-		if r.Request().Method != http.MethodGet {
-			w.WriteHeader(http.StatusMethodNotAllowed)
-			return
-		}
-		next(w, r, next)
-	}
+	var mw1 Middleware[*testRequest] = new(teapotChecker)
+	var mw2 Middleware[*testRequest] = new(methodChecker)
+
 	handler := NewTypedHandler(func(r *http.Request) *testRequest {
 		req := new(testRequest)
 		req.r = r
