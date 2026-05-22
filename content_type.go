@@ -220,12 +220,31 @@ type HttpError interface {
 }
 
 func (fn ContentTypeHandler[R, O]) AsTypedHandler(ctn *ContentTypeNegotiator, logger io.Writer) typedHandler[R] {
+
+	outputTypeReflection := reflect.TypeFor[O]()
+	outputTransformerCache := map[reflect.Type]func(O, http.ResponseWriter) error{}
+	mu := sync.RWMutex{}
+	// cache per handler..or cache per O?
 	return func(w http.ResponseWriter, r R) {
 		implementation, contentType := ctn.negotiateContentType(r.Request().Header.Get("Accept"), reflect.TypeFor[O]())
 		if implementation == nil {
 			// You could include a list of available content types, either in the response body or its headers
 			w.WriteHeader(http.StatusNotAcceptable)
 			return
+		}
+
+		var transformer func(O, http.ResponseWriter) error
+		var isset bool
+		mu.RLock()
+		if transformer, isset = outputTransformerCache[implementation]; !isset {
+			mu.RUnlock()
+			method, _ := outputTypeReflection.MethodByName(implementation.Method(0).Name)
+			transformer = method.Func.Interface().(func(O, http.ResponseWriter) error)
+			mu.Lock()
+			outputTransformerCache[implementation] = transformer
+			mu.Unlock()
+		} else {
+			mu.RUnlock()
 		}
 
 		// Assuming it succeeds:
@@ -240,8 +259,7 @@ func (fn ContentTypeHandler[R, O]) AsTypedHandler(ctn *ContentTypeNegotiator, lo
 		}
 		w.Header().Set("Content-Type", contentType)
 
-		transformer := reflect.ValueOf(out).Convert(implementation).Method(0).Interface().(func(http.ResponseWriter) error)
-		if err := transformer(w); err != nil {
+		if err := transformer(out, w); err != nil {
 			fmt.Fprint(logger, err)
 			w.WriteHeader(http.StatusInternalServerError)
 		}
