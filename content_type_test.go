@@ -201,4 +201,42 @@ func TestAsTypedHandler(t *testing.T) {
 
 	}
 
+	t.Run("text/*", func(t *testing.T) {
+		req := httptest.NewRequest(http.MethodGet, "/", nil)
+		req.Header.Set("Accept", "text/*")
+		res := httptest.NewRecorder()
+		handler.ServeHTTP(res, req)
+
+		if got, want := res.Code, http.StatusOK; got != want {
+			t.Errorf("Unexpected code returned, got: %v, want: %v", got, want)
+		}
+
+		contentTypeParts := strings.Split(res.Header().Get("Content-Type"), "/")
+		if got, want := contentTypeParts[0], "text"; got != want {
+			t.Errorf("Unexpected content type (main). Got: %v, want: %v", got, want)
+		}
+		if got, not := contentTypeParts[1], "*"; got == not {
+			t.Errorf("Unexpected content type (subtype). Got: %v", got)
+		}
+
+	})
+	t.Run("*/*", func(t *testing.T) {
+		req := httptest.NewRequest(http.MethodGet, "/", nil)
+		req.Header.Set("Accept", "text/*")
+		res := httptest.NewRecorder()
+		handler.ServeHTTP(res, req)
+
+		if got, want := res.Code, http.StatusOK; got != want {
+			t.Errorf("Unexpected code returned, got: %v, want: %v", got, want)
+		}
+
+		contentTypeParts := strings.Split(res.Header().Get("Content-Type"), "/")
+		if got, not := contentTypeParts[0], "*"; got == not {
+			t.Errorf("Unexpected content type (main). Got: %v", got)
+		}
+		if got, not := contentTypeParts[1], "*"; got == not {
+			t.Errorf("Unexpected content type (subtype). Got: %v", got)
+		}
+	})
+
 }

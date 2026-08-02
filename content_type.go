@@ -162,17 +162,19 @@ func (ctn *ContentTypeNegotiator) negotiateContentType(acceptHeader string, data
 				acceptedType.implementation = implements
 				found = true
 			} else if st == "*" {
-				for _, implements := range subtypes {
+				for subtype, implements := range subtypes {
 					acceptedType.implementation = implements
+					acceptedType.contentType = t + "/" + subtype
 					break
 				}
 				found = true
 			}
 		} else if t == "*" {
 		WildcardMatchLoop:
-			for _, subtypes := range offers {
-				for _, implements := range subtypes {
+			for tt, subtypes := range offers {
+				for subtype, implements := range subtypes {
 					acceptedType.implementation = implements
+					acceptedType.contentType = tt + "/" + subtype
 					break WildcardMatchLoop
 				}
 			}
