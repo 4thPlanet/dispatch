@@ -140,6 +140,10 @@ type TeapotError struct{}
 
 func (err TeapotError) Error() string  { return "I'm a little teapot, short and stout!" }
 func (err TeapotError) ErrorCode() int { return http.StatusTeapot }
+func (err TeapotError) Json(w http.ResponseWriter) error {
+	_, e := w.Write([]byte(`{"error":"` + err.Error() + `"}`))
+	return e
+}
 
 var fooView ContentTypeHandler[*testRequest, *Foo] = func(r *testRequest) (*Foo, error) {
 	switch r.PathDepth {
@@ -172,7 +176,7 @@ func TestAsTypedHandler(t *testing.T) {
 		{Path: "/", Accept: "application/json", Code: http.StatusOK, BodyWriter: foo.Json},
 		{Path: "/", Accept: "text/csv", Code: http.StatusNotAcceptable, BodyWriter: foo.Json},
 		{Path: "/foo/bar", Accept: "text/html", Code: http.StatusInternalServerError},
-		{Path: "/foo/bar/baz", Accept: "text/html", Code: http.StatusTeapot},
+		{Path: "/foo/bar/baz", Accept: "text/html;q=1.0,application/json", Code: http.StatusTeapot},
 	} {
 		t.Run(test.Path+"_"+test.Accept, func(t *testing.T) {
 			req := httptest.NewRequest(http.MethodGet, test.Path, nil)

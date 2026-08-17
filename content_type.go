@@ -252,10 +252,24 @@ func (fn ContentTypeHandler[R, O]) AsTypedHandler(ctn *ContentTypeNegotiator, lo
 		// Assuming it succeeds:
 		out, err := fn(r)
 		if err != nil {
+			responseCode := http.StatusInternalServerError
 			if httpError, ok := err.(HttpError); ok {
-				w.WriteHeader(httpError.ErrorCode())
+				responseCode = httpError.ErrorCode()
+			}
+
+			errType := reflect.TypeOf(err)
+			implementation, contentType = ctn.negotiateContentType(r.Request().Header.Get("Accept"), errType)
+			if implementation != nil {
+				w.Header().Set("Content-Type", contentType)
+				w.WriteHeader(responseCode)
+				method, _ := errType.MethodByName(implementation.Method(0).Name)
+
+				output := method.Func.Call([]reflect.Value{reflect.ValueOf(err), reflect.ValueOf(w)})
+				if err, ok := output[0].Interface().(error); ok && err != nil {
+					fmt.Fprintf(logger, "Unable to render returned error to client: %v\n", err)
+				}
 			} else {
-				w.WriteHeader(http.StatusInternalServerError)
+				w.WriteHeader(responseCode)
 			}
 			return
 		}
