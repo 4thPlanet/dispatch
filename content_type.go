@@ -228,6 +228,7 @@ func (fn ContentTypeHandler[R, O]) AsTypedHandler(ctn *ContentTypeNegotiator, lo
 	mu := sync.RWMutex{}
 	// cache per handler..or cache per O?
 	return func(w http.ResponseWriter, r R) {
+		w.Header().Add("Vary", "Accept")
 		implementation, contentType := ctn.negotiateContentType(r.Request().Header.Get("Accept"), outputTypeReflection)
 		if implementation == nil {
 			// You could include a list of available content types, either in the response body or its headers

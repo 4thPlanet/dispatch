@@ -188,6 +188,10 @@ func TestAsTypedHandler(t *testing.T) {
 				t.Errorf("Unexpected code returned, got: %v, want: %v", got, want)
 			}
 
+			if got, want := res.Header().Get("Vary"), "Accept"; got != want {
+				t.Errorf("Unexpected Vary header returned, got: %v, want: %v", got, want)
+			}
+
 			if res.Code == http.StatusOK {
 				if got, want := res.Header().Get("Content-Type"), test.Accept; got != want {
 					t.Errorf("Unexpected code returned, got: %v, want: %v", got, want)
